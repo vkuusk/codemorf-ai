@@ -1,0 +1,14 @@
+[
+  {
+    "command": "python -c 'from new_testcode import multiply_a_b; print(multiply_a_b(2.5, 3))'",
+    "expected_result": "7.5"
+  },
+  {
+    "command": "python -c 'from new_testcode import multiply_a_b; print(multiply_a_b(10, 0))'",
+    "expected_result": "0"
+  },
+  {
+    "command": "python -c 'from new_testcode import multiply_a_b; print(multiply_a_b(-4, 2))'",
+    "expected_result": "-8"
+  }
+]

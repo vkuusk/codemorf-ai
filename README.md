@@ -130,7 +130,7 @@ make docker
 
 ## License
 
-[Apache License Version 2.0](LISENCE)
+[Apache License Version 2.0](LICENSE)
 
 ## Acknowledgments
 

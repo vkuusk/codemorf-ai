@@ -18,11 +18,13 @@ that can be executed to evaluate the newly generated code. Then it proceeds with
 
 It’s a basic dev workflow, similar to what AI tools like [Cursor IDE Agent Mode](https://docs.cursor.com/chat/agent) 
 or [GitHub Copilot](https://github.com/features/copilot) might do internally. 
-Codemorf breaks these steps out explicitly into a LangGraph workflow with a minimal CLI wrapper, 
+
+It's just that Codemorf breaks these steps out explicitly into a LangGraph workflow with a minimal CLI wrapper, 
 making it easier to see what each step looks like and where LLMs help or fall short.
 
 This project is **not production-ready** — it’s primarily a learning tool to figure out 
-where LLMs are most useful in SDLC workflows. <br>
+where LLMs are most useful in SDLC workflows.
+
 _Note:_ While the code transformation part (based on NL instructions) is relatively straightforward,
 the more interesting challenge is interpreting test cases in NL and turning them into runnable tests
 — especially in projects where there's no predefined test framework or language constraints.

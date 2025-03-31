@@ -1,140 +1,43 @@
-# CodeMorf ai
+# Codemorf ai
 
-A tool for refactoring code using LLMs.
+## Introduction
 
-## Overview
+**Codemorf** is an experimental CLI tool that uses LLMs to automate code transformation workflows
+based on natural language instructions and test cases.
+It’s built with [LangGraph](https://github.com/langchain-ai/langgraph) 
+and serves as a sandbox for exploring how LLMs can assist in various stages of 
+the software development lifecycle (SDLC), beyond just "codegen".
 
-Input:
-1. Source code
-2. Transformation rules
-3. Validation testcases
+The main idea is simple and straightforward:  
+1. Take a codebase + natural language instructions describing changes.  
+2. Take natural language test cases describing what success looks like.  
+3. Run a loop: ( _transform → validate → fix_ ) until all tests pass.
 
-Output:
-1. Refactored code
-2. Validation test results
+Codemorf uses an LLM to translate NL test case descriptions into a machine-understandable form
+that can be executed to evaluate the newly generated code. Then it proceeds with the loop (transform/validate/fix)
 
-## Installation
+It’s a basic dev workflow, similar to what AI tools like [Cursor IDE Agent Mode](https://docs.cursor.com/chat/agent) 
+or [GitHub Copilot](https://github.com/features/copilot) might do internally. 
+Codemorf breaks these steps out explicitly into a LangGraph workflow with a minimal CLI wrapper, 
+making it easier to see what each step looks like and where LLMs help or fall short.
 
-### Source Code 
+This project is **not production-ready** — it’s primarily a learning tool to figure out 
+where LLMs are most useful in SDLC workflows. <br>
+_Note:_ While the code transformation part (based on NL instructions) is relatively straightforward,
+the more interesting challenge is interpreting test cases in NL and turning them into runnable tests
+— especially in projects where there's no predefined test framework or language constraints.
 
-```bash
-# Clone the repository
-git clone https://github.com/vkuusk/codemorf-ai.git
-cd codemorf-ai
+The long-term goal is to refine these pieces into something that’s actually useful for real dev work, 
+but this repo is mostly about experimentation and learning right now.
 
-# Install dependencies
-pip install -r requirements.txt
-```
 
-## Configuration
+**Disclaimer:** This is the first working commit. There are a few obvious 
+improvements to make before it becomes self-explanatory or easier to use. 🙂
 
-Create a `.env` file in your project root (or copy from `examples/.env.example`):
-
-```ini
-# LLM Provider Configuration
-LLM_PROVIDER=ollama
-OLLAMA_MODEL=llama3:8b
-OLLAMA_HOST=http://localhost:11434
-OLLAMA_API_ENABLED=true
-
-# For OpenAI
-# LLM_PROVIDER=openai
-# OPENAI_API_KEY=your_key_here
-# OPENAI_MODEL=gpt-4-turbo-preview
-
-# For Anthropic
-# LLM_PROVIDER=anthropic
-# ANTHROPIC_API_KEY=your_key_here
-# ANTHROPIC_MODEL=claude-3-opus-20240229
-
-# Log Level
-LOG_LEVEL=INFO
-```
-
-## Usage
-
-### Docker container
-
-```bash
-docker run ghcr.io/vkuusk/codemorf:latest
-```
-
-### From Source Code
-
-```bash
-python src/cli/codemorf.py \
-    --original-code input/original.py \
-    --convertion-rules input/conversion_rules.txt \
-    --testcases input/testcases.txt \
-    --output-file output/refactored.py \
-    --save-test-commands output/test_commands.json \
-    --max-retries 3
-```
-
-### Input File Formats
-
-#### Conversion Rules Format
-```text
-Refactoring Requirements:
-1. Requirement 1
-2. Requirement 2
-...
-```
-
-#### Test Cases Format
-```text
-Test Cases:
-if a=value1 and b=value2 then the output should be expected_result
-...
-```
-
-## Supported Languages
-
-Currently supported programming languages:
-- Python (experimental support)
-- More languages coming ...
-
-## Architecture
-
-The tool uses a workflow-based architecture powered by LangGraph:
-1. Test Execs Generation
-2. Refactoring
-3. Test Execution
-4. Validation
-
-## Development
-
-### Adding Support for New Languages
-
-To add support for a new programming language:
-1. Create a new test runner in `src/core/test_{language}.py`
-2. Implement the language-specific test function
-3. Update the test execution logic in `src/core/utils.py`
-
-### Running Tests
-
-```bash
-cd test/cli
-./test-cli.sh
-# or to test docker image after local docker build
-./test-cli-docker.sh
-```
-
-## Building
-
-```bash
-cd pkg
-make docker
-
-```
 
 ## License
 
 [Apache License Version 2.0](LICENSE)
 
-## Acknowledgments
-
-- LangGraph for workflow management
-- Ollama/OpenAI/Anthropic for LLM support
 
 

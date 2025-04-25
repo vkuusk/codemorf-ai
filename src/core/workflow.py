@@ -167,7 +167,21 @@ Requirements:
 Return ONLY the fixed Python code between the <REFACTORED_CODE> tags."""
 
     logger.debug("Calling LLM generate")
-    response = llm.generate(prompt)
+
+
+    try:
+        response = llm.generate(prompt)
+    except Exception as e:
+        logger.error(f"Error generating code: {e}")
+        # Set a default value or use original code
+        state["refactored_code"] = state['original_code']
+        return state
+
+
+
+
+
+
     logger.debug("Got LLM response")
 
     # Extract only the code part using the new separator

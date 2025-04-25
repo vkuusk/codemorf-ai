@@ -11,10 +11,10 @@ export PYTHONPATH=$ROOT_DIR
 
 LOG_FILE="testing-logging.log"
 
- INPUT_CODE_FILE="src-input.py"
+ INPUT_CODE_FILE="test_input.py"
  CONVERSION_RULES_FILE="conversion-rules.txt"
  TESTCASES_FILE="test-cases.txt"
- OUTPUT_FILE="src-output.py"
+ OUTPUT_CODE_PREFIX="new"
 
 
 
@@ -24,12 +24,13 @@ pushd "$SCRIPT_DIR" > /dev/null
 
 # Run the refactoring tool
 python $ROOT_DIR/src/cli/codemorf.py \
-    --input-code-file $INPUT_CODE_FILE \
-    --conversion-rules $CONVERSION_RULES_FILE \
-    --test-cases $TESTCASES_FILE \
-    --output-file $OUTPUT_FILE \
-    --save-workflow-stages  \
-    --log-file $LOG_FILE
+    --input_code_file $INPUT_CODE_FILE \
+    --rules_file $CONVERSION_RULES_FILE \
+    --testcases_file $TESTCASES_FILE \
+    --output_code_prefix $OUTPUT_CODE_PREFIX \
+    --save_workflow_stages true \
+    --log_file $LOG_FILE \
+    --log_level DEBUG
 
 
 

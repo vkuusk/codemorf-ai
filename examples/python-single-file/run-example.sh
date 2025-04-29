@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-LOG_LEVEL=INFO  # DEBUG
+LOG_LEVEL=DEBUG
 
 
 
@@ -35,6 +35,20 @@ python $ROOT_DIR/src/cli/codemorf.py \
     --save-workflow-stages \
     --log-file $LOG_FILE \
     --log-level $LOG_LEVEL
+
+
+### Run the refactoring tool using Docker
+#docker run --rm \
+#    -v "$SCRIPT_DIR:/app" \
+#    codemorf:latest \
+#    --input-code-file $INPUT_CODE_FILE \
+#    --rules-file $CONVERSION_RULES_FILE \
+#    --testcases-file $TESTCASES_FILE \
+#    --output-code-prefix $OUTPUT_CODE_PREFIX \
+#    --save-workflow-stages \
+#    --log-file $LOG_FILE \
+#    --log-level $LOG_LEVEL
+
 
 
 

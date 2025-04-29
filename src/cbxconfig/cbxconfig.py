@@ -8,9 +8,9 @@ It allows loading configuration from various sources with priority order.
 import os
 import json
 import yaml
+import toml
 import logging
 from typing import Dict, Any
-from dotenv import load_dotenv
 from dynaconf import Dynaconf
 
 
@@ -134,6 +134,8 @@ class CbxConfig:
                     json.dump(self._config, f, indent=2)
                 elif file_path.endswith(('.yaml', '.yml')):
                     yaml.dump(self._config, f, default_flow_style=False)
+                elif file_path.endswith('.toml'):
+                    toml.dump(self._config, f)
                 else:
                     logger.error(f"Unsupported file format: {file_path}")
                     return False
@@ -167,7 +169,6 @@ class CbxConfig:
                     "{}/config.toml".format(self._config_dir), # main config
                     "{}/secrets.toml".format(self._config_dir),  # For sensitive data
                 ],
-                load_dotenv=True,  # Load .env file if present
                 default_settings=self._defaults,  # Apply default values
                 lowercase_read=True
             )
@@ -190,7 +191,6 @@ class CbxConfig:
             k: v for k, v in settings.as_dict().items()
             if not k.startswith('_')  # Exclude dynaconf internal keys
         }
-        print(settings_dict)
 
         # Create a case-insensitive mapping to merge uppercase and lowercase values
         merged_dict = {}
@@ -251,32 +251,64 @@ def _update_config(target, source):
 
 
 
-def configure_logging(log_file, quiet_flag, log_level=logging.INFO):
-    """Configure logging for the entire application."""
+def configure_logging(log_file=None, quiet_flag=False, log_level="INFO"):
+    """
+    Configure logging for the entire application.
 
-    # Create handlers
-    if log_file:
-        log_dir = os.path.dirname(log_file)
-        if log_dir:
-            os.makedirs(log_dir, exist_ok=True)
-        file_handler = logging.FileHandler(log_file)
-
-    if not quiet_flag:
-        console_handler = logging.StreamHandler()
-
-    # Create formatters and add it to handlers
+    Args:
+        log_file (str, optional): Path to log file. If None or empty, no file logging.
+        quiet_flag (bool, optional): If True, suppress console output.
+        log_level (str or int, optional): Logging level (DEBUG, INFO, etc. or corresponding int values)
+    """
+    # Create formatters
     log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     formatter = logging.Formatter(log_format)
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
 
-    # Get the root logger and set its level
+    # Get the root logger
     root_logger = logging.getLogger()
-    root_logger.setLevel(log_level)
 
-    # Add handlers to the root logger
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(console_handler)
+    # Clear any existing handlers
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+
+    # Convert string log level to actual level if needed
+    if log_level is None:
+        numeric_level = logging.INFO
+    elif isinstance(log_level, str):
+        try:
+            numeric_level = getattr(logging, log_level.upper())
+        except (AttributeError, TypeError):
+            numeric_level = logging.INFO
+            print(f"Invalid log level: {log_level}, defaulting to INFO")
+    else:
+        numeric_level = log_level
+
+    # Set the log level
+    root_logger.setLevel(numeric_level)
+
+    # Create and add file handler if log_file is provided
+    if log_file:
+        try:
+            log_dir = os.path.dirname(log_file)
+            if log_dir:
+                os.makedirs(log_dir, exist_ok=True)
+            file_handler = logging.FileHandler(log_file)
+            file_handler.setFormatter(formatter)
+            root_logger.addHandler(file_handler)
+        except Exception as e:
+            print(f"Error setting up file logging: {e}")
+
+    # Create and add console handler if not quiet
+    if not quiet_flag:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        root_logger.addHandler(console_handler)
+
+    # If no handlers were added, add a NullHandler to prevent warnings
+    if not root_logger.handlers:
+        root_logger.addHandler(logging.NullHandler())
+
+
 
 
 # Example usage

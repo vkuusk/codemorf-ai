@@ -109,12 +109,11 @@ class OllamaProvider(BaseLLMProvider):
             return f"Error: {error_msg}"
 
 class OpenAIProvider(BaseLLMProvider):
-    def __init__(self, model_name: str, api_key: Optional[str] = None, logger: logging.Logger = None):
+    def __init__(self, model_name: str, api_key, logger: logging.Logger = None):
         super().__init__(logger)
         self.model_name = model_name
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise ValueError("OpenAI API key not found in environment variables")
+        self.api_key = api_key
+
         openai.api_key = self.api_key
         self.logger.debug("Initialized OpenAI client")
 

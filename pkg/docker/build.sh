@@ -3,6 +3,10 @@
 # Initialize publish flag
 publish_build=false
 
+dev_tag="develop"
+
+release_tag="v0.1.0"
+
 gh_username="vkuusk"
 docker_image_name="codemorf"
 
@@ -61,10 +65,10 @@ pushd $script_dir > /dev/null
 # Build with both local and GitHub Container Registry tags if publishing
 if [ "$publish_build" = true ]; then
     echo "Building with GitHub Container Registry tag..."
-    docker build -t "${docker_image_name}:latest" -t "ghcr.io/${gh_username}/${docker_image_name}:latest" .
+    docker build -t "${docker_image_name}:${release_tag}" -t "ghcr.io/${gh_username}/${docker_image_name}:${release_tag}" .
 else
     echo "Building with local tag only..."
-    docker build -t "${docker_image_name}:latest" .
+    docker build -t "${docker_image_name}:${dev_tag}" .
 fi
 
 # Push to GitHub Container Registry if publishing
@@ -80,7 +84,7 @@ if [ "$publish_build" = true ]; then
     echo "$GITHUB_TOKEN" | docker login ghcr.io -u ${gh_username} --password-stdin
 
     echo "Pushing image to GitHub Container Registry..."
-    docker push "ghcr.io/${gh_username}/${docker_image_name}:latest"
+    docker push "ghcr.io/${gh_username}/${docker_image_name}:${release_tag}"
 fi
 
 # Cleanup docker build dir

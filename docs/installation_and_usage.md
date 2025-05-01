@@ -13,27 +13,28 @@ pip install -r requirements.txt
 
 ## Configuration
 
-Create a `.env` file in your project root (or copy from `examples/.env.example`):
+Create  ~/.codemorf/config.toml 
+```bash
+# Basic configuration
 
-```ini
 # LLM Provider Configuration
-LLM_PROVIDER=ollama
-OLLAMA_MODEL=llama3:8b
-OLLAMA_HOST=http://localhost:11434
-OLLAMA_API_ENABLED=true
+# Choose which provider to use: "ollama", "openai", or "anthropic"
+# "loopback" will skip calling LLM and return the echo of prompt back with
 
-# For OpenAI
-# LLM_PROVIDER=openai
-# OPENAI_API_KEY=your_key_here
-# OPENAI_MODEL=gpt-4-turbo-preview
+llm_provider = "openai"
 
-# For Anthropic
-# LLM_PROVIDER=anthropic
-# ANTHROPIC_API_KEY=your_key_here
-# ANTHROPIC_MODEL=claude-3-opus-20240229
+# OpenAI config
+openai_model = "gpt-4.1-nano"
 
-# Log Level
-LOG_LEVEL=INFO
+# OLLAMA config
+# ollama_host = "http://10.0.0.25:11434"
+# ollama_model = "DeepSeek-R1:latest"
+```
+Create ~/.codemorf/secrets.toml 
+
+```bash
+# OpenAI Configuration
+openai_api_key = <your_key_here>
 ```
 
 ## Usage
@@ -41,19 +42,25 @@ LOG_LEVEL=INFO
 ### Docker container
 
 ```bash
-docker run ghcr.io/vkuusk/codemorf:latest
+docker run ghcr.io/vkuusk/codemorf:v0.1.0
 ```
 
 ### From Source Code
 
 ```bash
-python src/cli/codemorf.py \
-    --original-code input/original.py \
-    --convertion-rules input/conversion_rules.txt \
-    --testcases input/testcases.txt \
-    --output-file output/refactored.py \
-    --save-test-commands output/test_commands.json \
-    --max-retries 3
+# add venv with python and install requirements
+# activate venv
+
+# from repo root
+python ./src/cli/codemorf.py \
+    --input-code-file $INPUT_CODE_FILE \
+    --rules-file $CONVERSION_RULES_FILE \
+    --testcases-file $TESTCASES_FILE \
+    --output-code-prefix $OUTPUT_CODE_PREFIX \
+    --save-workflow-stages \
+    --log-file $LOG_FILE \
+    --log-level $LOG_LEVEL
+
 ```
 
 ### Input File Formats (suggested)
@@ -110,3 +117,5 @@ cd test/cli
 ```bash
 cd pkg
 make docker
+```
+

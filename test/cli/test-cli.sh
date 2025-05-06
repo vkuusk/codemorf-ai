@@ -9,28 +9,41 @@ ROOT_DIR="$( cd "$SCRIPT_DIR/../.." && pwd )"
 # Set PYTHONPATH to ROOT_DIR and export it
 export PYTHONPATH=$ROOT_DIR
 
+# uncomment if secrets.toml is not set and $OPENAI_API_KEY is exported outside this script
+#export CODEMORF_openai_api_key=$OPENAI_API_KEY  # set this manually OPENAI_API_KEY
 
-TEST_CODE_FILE=testcode.py
-CONVERSION_RULES_FILE=conversion_rules.txt
-TESTCASES_FILE=testcases.txt
-OUTPUT_FILE=new_${TEST_CODE_FILE}
-RESULTS_FILE=results.txt
-TEST_COMMANDS_FILE=test_commands.json
-LOG_FILE=refactoring.log
+
+LOG_LEVEL=INFO  # DEBUG
+LOG_FILE="codemorf-cli.log"
+
+INPUT_DIR="input"
+OUTPUT_DIR="output"
+# it's where temp files might be stored. e.g. "executable_tests.json
+WORK_DIR="output"
+
+INPUT_CODE_FILE="input_code.py"
+CONVERSION_RULES_FILE="input_rules.txt"
+TESTCASES_FILE="input_testcases.txt"
+OUTPUT_CODE_PREFIX="processed"
+
+
+
 
 # Push current directory to stack and change to script directory
 pushd "$SCRIPT_DIR" > /dev/null
 
-# Run the refactoring tool
-python $ROOT_DIR/src/cli/codemorf.py --original-code input/$TEST_CODE_FILE \
-    --convertion-rules input/$CONVERSION_RULES_FILE \
-    --testcases input/$TESTCASES_FILE \
-    --output-file output/$OUTPUT_FILE \
-    --results-file output/$RESULTS_FILE \
-    --save-test-commands output/$TEST_COMMANDS_FILE \
-    --log-file output/$LOG_FILE
+# Run the morfing workflow Locally
+python $ROOT_DIR/src/cli/codemorf.py \
+    --input-dir=$INPUT_DIR \
+    --output-dir=$OUTPUT_DIR \
+    --work-dir=$WORK_DIR \
+    --input-code-file $INPUT_CODE_FILE \
+    --rules-file $CONVERSION_RULES_FILE \
+    --testcases-file $TESTCASES_FILE \
+    --output-code-prefix $OUTPUT_CODE_PREFIX \
+    --save-workflow-stages \
+    --log-file $LOG_FILE \
+    --log-level $LOG_LEVEL
 
 # Return to original directory by popping from the stack
 popd > /dev/null
-
-

@@ -1,0 +1,5 @@
+Test Cases for multiply_a_b function:
+
+if a=2.5 and b=3 then the output should be 7.5
+if a=10 and b=0 then the output should be 0
+if a=-4 and b=2 then the output should be -8

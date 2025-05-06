@@ -8,6 +8,9 @@ setup(
     install_requires=[
         "python-dotenv>=1.0.0",
         "requests>=2.28.0",
+        "dynaconf>=3.2.10",
+        "toml>=0.10.2",
+        "PyYAML>=6.0.2",
         "langgraph>=0.0.10",
         "openai>=1.3.0",
         "ollama>=0.1.0",
@@ -19,7 +22,7 @@ setup(
             "codemorf=cli.codemorf:main",
         ],
     },
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     description="A tool that uses LLMs to refactor code",
     author="Vlad Kuusk",
     author_email="vkuusk@cembryonix.com",

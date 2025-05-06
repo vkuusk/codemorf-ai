@@ -109,12 +109,11 @@ class OllamaProvider(BaseLLMProvider):
             return f"Error: {error_msg}"
 
 class OpenAIProvider(BaseLLMProvider):
-    def __init__(self, model_name: str, api_key: Optional[str] = None, logger: logging.Logger = None):
+    def __init__(self, model_name: str, api_key, logger: logging.Logger = None):
         super().__init__(logger)
         self.model_name = model_name
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise ValueError("OpenAI API key not found in environment variables")
+        self.api_key = api_key
+
         openai.api_key = self.api_key
         self.logger.debug("Initialized OpenAI client")
 
@@ -208,27 +207,27 @@ class LLMClient:
         self.logger = logger or logging.getLogger('codemorf')
         
         # Get provider from environment or parameter
-        self.provider_type = provider_type or os.getenv("LLM_PROVIDER", "ollama")
+        self.provider_type = provider_type
         self.provider_type = self.provider_type.lower()
         
         self.logger.debug(f"Selected provider type: {self.provider_type}")
 
         # Initialize the appropriate provider
         if self.provider_type == LLMProvider.OLLAMA.value:
-            model = model_name or os.getenv("OLLAMA_MODEL", "llama3:8b").strip('"\'')
-            host = kwargs.get("host") or os.getenv("OLLAMA_HOST", "http://localhost:11434")
+            model = model_name
+            host = kwargs.get("host")
             self.logger.debug(f"Initializing Ollama provider with model: {model}, host: {host}")
             self.provider = OllamaProvider(model, host, self.logger)
         
         elif self.provider_type == LLMProvider.OPENAI.value:
-            model = model_name or os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview").strip('"\'')
-            api_key = kwargs.get("api_key") or os.getenv("OPENAI_API_KEY")
+            model = model_name
+            api_key = kwargs.get("api_key")
             self.logger.debug(f"Initializing OpenAI provider with model: {model}")
             self.provider = OpenAIProvider(model, api_key, self.logger)
         
         elif self.provider_type == LLMProvider.ANTHROPIC.value:
-            model = model_name or os.getenv("ANTHROPIC_MODEL", "claude-3-opus-20240229").strip('"\'')
-            api_key = kwargs.get("api_key") or os.getenv("ANTHROPIC_API_KEY")
+            model = model_name
+            api_key = kwargs.get("api_key")
             self.logger.debug(f"Initializing Anthropic provider with model: {model}")
             self.provider = AnthropicProvider(model, api_key, self.logger)
         
@@ -252,6 +251,32 @@ class LLMClient:
         self.logger.debug("Got LLM response")
         return response
 
-def get_llm_client(**kwargs):
-    """Get an LLM client with configuration from environment variables."""
-    return LLMClient(**kwargs)
+def get_llm_client(appcfg):
+    # Get provider type
+    provider_type = appcfg.get("llm_provider")
+    # model_name = appcfg.get("model_name")
+
+    # Create kwargs dictionary
+    kwargs = {}
+
+    # Add provider-specific parameters to kwargs
+    if provider_type == "ollama":
+        kwargs["host"] = appcfg.get("ollama_host")
+        kwargs["api_enabled"] = appcfg.get("ollama_api_enabled")
+        kwargs["model_name"] = appcfg.get("ollama_model")
+
+    elif provider_type == "openai":
+        kwargs["api_key"] = appcfg.get("openai_api_key")
+        kwargs["model_name"] = appcfg.get("openai_model")
+
+    elif provider_type == "anthropic":
+        kwargs["api_key"] = appcfg.get("anthropic_api_key")
+        kwargs["model_name"] = appcfg.get("anthropic_model")
+
+    # Pass the entire config dictionary
+    kwargs["appconfig"] = appcfg._config
+
+
+    model_name = appcfg.get("model_name")
+
+    return LLMClient(provider_type, **kwargs)

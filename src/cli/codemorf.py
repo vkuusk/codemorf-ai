@@ -4,114 +4,164 @@ import argparse
 import json
 import os
 import logging
-from dotenv import load_dotenv
+import sys
 
-def process_all_args():
-    parser = argparse.ArgumentParser(description="Code Refactoring Tool")
-    parser.add_argument("--original-code", required=True, help="Path to code file to refactor")
-    parser.add_argument("--convertion-rules", required=True, help="Path to requirements file")
-    parser.add_argument("--testcases", required=True, help="Path to test cases file")
-    parser.add_argument("--output-file", required=True, help="Path to save refactored code")
-    parser.add_argument("--results-file", help="Path to save test results")
-    parser.add_argument("--save-test-commands", help="Path to save generated test commands")
-    parser.add_argument("--max-retries", type=int, default=3, help="Maximum number of retries for LLM calls")
-    parser.add_argument("--code-language", default="python", choices=["python"], help="Programming language of the code to refactor")
-    parser.add_argument("--log-file", help="Path to log file. If not provided, logs to stdout/stderr")
-    parser.add_argument("--quiet", action="store_true", help="Suppress console output when logging to file")
+# TODO: cleanup import for development
+try:
+    # import when package is installed
+    from core.workflow import create_refactoring_workflow, WorkflowState
+    from core.llm import get_llm_client
+    from cbxconfig import configure_logging
+    from cbxconfig import CbxConfig
+except ImportError:
+    print("Failed to import Submodules in file: {}".format(__file__))
+    print('For local development use "pip install -e ." in repo root')
+    sys.exit(1)
+
+
+APP_NAME = "codemorf"
+# Default configuration values
+DEFAULT_CONFIG = {
+    # Note: _config_dir  will be set to $HOME/.APP_NAME in class constructor !!! can override ONLY on command_line
+    #
+    # standard for filesystem
+    'config_dir': '',
+    'input_dir': '',
+    'output_dir': '',
+    'work_dir': '',
+    'log_file': '',
+    'log_level': 'INFO',
+    'quiet': False,
+    # workflow defaults
+    'save_workflow_stages': False,
+    'max_retries': 3,
+    'code_language': 'python',
+
+    'input_code_file': '',
+    'output_code_prefix': 'new',
+    'rules_file': '',
+    'testcases_file': '',
+    #
+
+    # LLM configs
+    'llm_provider': '',
+    'ollama_host': 'http://localhost:11434',
+    'ollama_model': 'DeepSeek-R1:latest',
+    'ollama_api_enabled': True, # When True - use direct API calls, when False - use ollama package
+    'openai_api_key': '',
+    'openai_model': 'gpt-4.1-nano',
+    'anthropic_api_key': '',
+    'anthropic_model': 'claude-3-haiku-latest'
+}
+
+
+def process_all_args(app_name, default_config):
+
+    required_keys = ['input_code_file', 'rules_file', 'testcases_file']
+
+    parser = argparse.ArgumentParser(description=f"{app_name} configuration")
+
+    for key, value in default_config.items():
+        # Note: key names don't have hyphens
+        arg_name = key.replace('_', '-')
+
+        # required are never BOOL
+        if key in required_keys:
+            parser.add_argument(
+                f"--{arg_name}",
+                required=True,
+                type=type(value),
+                help=f"Required param {arg_name} parameter"
+            )
+            continue
+
+        if isinstance(value, bool):
+            parser.add_argument(
+                f"--{arg_name}",
+                action='store_true' ,
+                help=f"Enable/Disable {key}"
+            )
+        else:
+            parser.add_argument(
+                f"--{arg_name}",
+                type=type(value),
+                help=f"Override config value for:  {key}"
+            )
 
     args = parser.parse_args()
     return args
 
+
+
 def main():
-    args = process_all_args()
+    args = process_all_args(APP_NAME, DEFAULT_CONFIG)
 
-    # Load environment variables first
-    current_dir = os.getcwd()
-    env_path = os.path.join(current_dir, '.env')
-    if os.path.isfile(env_path):
-        dotenv_result = load_dotenv(env_path)
-        print(f"load_dotenv result: {dotenv_result}")
-    else:
-        print(f"No .env file found at {env_path}")
+    configure_logging(args.log_file, args.quiet, args.log_level)
+    logger = logging.getLogger(__name__)
+    logger.info(f"Starting {APP_NAME}")
 
-    # Set up logging
-    handlers = []
-    
-    # Add file handler if log file is specified
-    if args.log_file:
-        # Create log directory if it doesn't exist
-        log_dir = os.path.dirname(args.log_file)
-        if log_dir:
-            os.makedirs(log_dir, exist_ok=True)
-        handlers.append(logging.FileHandler(args.log_file))
-    
-    # Add console handler if not quiet or no log file specified
-    if not args.quiet or not args.log_file:
-        handlers.append(logging.StreamHandler())
 
-    # Get log level from environment variable, default to INFO if not set
-    log_level_str = os.getenv('LOG_LEVEL', 'INFO').upper()
-    log_level = getattr(logging, log_level_str, logging.INFO)
-    print(f"Setting log level to: {log_level_str} ({log_level})")
+    appcfg = CbxConfig(APP_NAME, args, DEFAULT_CONFIG)
 
-    logging.basicConfig(
-        level=log_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=handlers
-    )
-    logger = logging.getLogger('codemorf')
+    # if args.config_dir:
+    #     appcfg.load(args,args.config_dir)
+    # else:
+    #     appcfg.load(args)
 
-    try:
-        # import when package is installed
-        from core.workflow import create_refactoring_workflow, RefactorState
-        from core.llm import get_llm_client
-        from core.utils import run_tests
-    except ImportError:
-        # import during development
-        from src.core.workflow import create_refactoring_workflow, RefactorState
-        from src.core.llm import get_llm_client
-        from src.core.utils import run_tests
+
+    input_scr_file = os.path.join(appcfg.get('input_dir'), appcfg.get('input_code_file'))
+    rules_file = os.path.join(appcfg.get('input_dir'), appcfg.get('rules_file'))
+    testcases_file = os.path.join(appcfg.get('input_dir'), appcfg.get('testcases_file'))
+    output_filename = "{}_{}".format(appcfg.get('output_code_prefix'), appcfg.get('input_code_file'))
+    output_file_full_name= os.path.join(appcfg.get('output_dir'), output_filename)
+    test_results_file_path = os.path.join(appcfg.get('output_dir'), 'final-test-results.txt')
 
     # Read input files
-    with open(args.original_code, "r") as f:
+    with open(input_scr_file, "r") as f:
         code = f.read()
 
-    with open(args.convertion_rules, "r") as f:
+    with open(rules_file, "r") as f:
         rules = f.read()
 
-    with open(args.testcases, "r") as f:
+    with open(testcases_file, "r") as f:
         tests = f.read()
 
     # Create LLM client
-    llm = get_llm_client()
+    llm = get_llm_client(appcfg)
 
     # Create input for workflow
     inputs = {
         "original_code": code,
         "requirements": rules,
+        "test_target": "original_code",
         "test_cases": tests,
         "test_results": None,
         "llm": llm,  # Add the LLM client to the inputs
         "iteration": 0,  # Add iteration counter
-        "max_retries": args.max_retries,  # Add max retries setting
-        "code_language": args.code_language,  # Add code language setting
-        "save_test_commands": args.save_test_commands,  # Add save_test_commands setting
-        "output_file": args.output_file,  # Add output_file path
+        "max_retries": appcfg.get('max_retries'),  # Add max retries setting
+        "code_language": appcfg.get('code_language'),  # Add code language setting
+        "save_workflow_stages": appcfg.get('save_workflow_stages'),  # Add save_test_commands setting
+        "work_dir": appcfg.get('work_dir'),
+        "output_file": output_file_full_name,  # Add output_file path
         "logger": logger  # Add logger to inputs
     }
 
     workflow = create_refactoring_workflow(llm, logger)
     result = workflow.invoke(inputs)
 
+
+    logger.debug(result)
+
+
     # Save outputs
-    with open(args.output_file, "w") as f:
-        f.write(result["refactored_code"])
+    with open(output_file_full_name, "w") as f:
+        f.write(result['refactored_code'])
 
-    if args.results_file:
-        with open(args.results_file, "w") as f:
-            json.dump(result["test_results"], f, indent=2)
+    if appcfg.get('save_workflow_stages'):
+        with open(test_results_file_path, "w") as f:
+            json.dump(result["test_results"].get("test_results"), f, indent=2)
 
-    logger.info(f"Refactoring complete. Output saved to {args.output_file}")
+    logger.info(f"Refactoring complete. Output saved to {output_file_full_name}")
 
 if __name__ == "__main__":
     main()

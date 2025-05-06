@@ -27,28 +27,80 @@ class CbxConfig:
     2. has methods to update and save configuration
     """
 
-    def __init__(self, app_name, default_config, user_home=None):
+    def __init__(self, app_name, args, default_config=None):
         """
         Initialize a new configuration instance.
 
         Args:
             app_name: Name of the application (used for logging and ENV vars prefix
+            args: command line arguments
             default_config: Optional dictionary with default configuration values.
-            user_home: User HOME dir when running as CLI
         """
-        # TODO: define structure of this module default config (minimal generix set)
 
         self.app_name = app_name.upper()
-        if user_home is not None:
-            self._config_dir = "{0}/.{1}".format(user_home,app_name.lower())
-        else:
-            self._config_dir = None # if None then it will need to be provided when calling load_config()
-
         self._config = {}
+
+
+        self.set('_current_dir', os.getcwd())
+        self.set('_user_home', os.path.expanduser('~'))
+        if args.config_dir:
+            self.set('_config_dir',args.config_dir)
+        else:
+            self.set('_config_dir', os.path.join(self.get('_user_home'),".{}".format(self.app_name.lower())) )
+
+        # assign defaults
         self._defaults = default_config
 
-        # Apply defaults before loading from sources
-        self.reset_to_defaults()
+        settings_files = []
+        config_dir = self.get('_config_dir')
+        config_path = os.path.join(config_dir,"config.toml")
+        secrets_path = os.path.join(config_dir,"secrets.toml")
+
+        if os.path.isfile(config_path):
+            settings_files.append(config_path)
+        if os.path.isfile(secrets_path):
+            settings_files.append(secrets_path)
+
+        if len(settings_files) == 0:
+            settings_files = None
+
+        settings = Dynaconf(
+            envvar_prefix=self.app_name,  # Prefix for environment variables
+            settings_files=settings_files,
+            default_settings=self._defaults,  # Apply default values
+            lowercase_read=True
+        )
+
+        # Update settings from Args
+        for key, value in vars(args).items():
+            if value is not None:
+                settings_key = key.replace('-', '_').lower()  # Convert to lowercase here
+                settings.set(settings_key, value)
+
+        # Get full settings dictionary and normalize everything to lowercase
+        settings_dict = settings.as_dict()
+        final_config = {}
+
+        # First, initialize with defaults (all lowercase)
+        for key, value in self._defaults.items():
+            final_config[key.lower()] = value
+
+        # Then extract from DEFAULT_SETTINGS if present
+        if 'DEFAULT_SETTINGS' in settings_dict:
+            for key, value in settings_dict['DEFAULT_SETTINGS'].items():
+                if value:  # Only update if the value is not empty or None
+                    final_config[key.lower()] = value
+
+        # Then add top-level settings (like environment variables)
+        for key, value in settings_dict.items():
+            if key != 'DEFAULT_SETTINGS' and not key.startswith('_'):
+                # Only override if value is not empty
+                if value:
+                    final_config[key.lower()] = value
+
+        # Apply the final normalized configuration
+        self._config = final_config
+
 
     def reset_to_defaults(self) -> None:
         """Reset configuration to default values."""
@@ -147,69 +199,7 @@ class CbxConfig:
             logger.error(f"Error saving configuration to {file_path}: {str(e)}")
             return False
 
-    def load(self, args, config_dir=None):
-        """
-        Populates internal structure: self._config
 
-        Args:
-            config_dir: Path to the configuration directory. Must be provided if running as service
-        :return:
-            0 - if successfully loaded
-            ErrorCode - code of what went wrong
-        """
-        current_dir = os.getcwd()
-        self.set('current_dir', current_dir)
-
-        app_name = self.app_name
-
-        if (config_dir is None) and self._config_dir is not None:
-            settings = Dynaconf(
-                envvar_prefix=app_name,  # Prefix for environment variables
-                settings_files=[
-                    "{}/config.toml".format(self._config_dir), # main config
-                    "{}/secrets.toml".format(self._config_dir),  # For sensitive data
-                ],
-                default_settings=self._defaults,  # Apply default values
-                lowercase_read=True
-            )
-        else:
-            settings = Dynaconf(
-                envvar_prefix=app_name,  # Prefix for environment variables
-                load_dotenv=True,  # Load .env file if present
-                default_settings=self._defaults,  # Apply default values
-                lowercase_read=True
-            )
-
-
-        # Update settings from Args
-        for key, value in vars(args).items():
-            if value is not None:
-                settings_key = key.replace('-', '.')
-                settings.set(settings_key, value)
-
-        settings_dict = {
-            k: v for k, v in settings.as_dict().items()
-            if not k.startswith('_')  # Exclude dynaconf internal keys
-        }
-
-        # Create a case-insensitive mapping to merge uppercase and lowercase values
-        merged_dict = {}
-
-        # Process all the default keys
-        for key in self._defaults.keys():
-            # Check for both lowercase and uppercase versions
-            if key in settings_dict:
-                merged_dict[key] = settings_dict[key]
-            elif key.upper() in settings_dict:
-                merged_dict[key] = settings_dict[key.upper()]
-            else:
-                # Keep default value
-                merged_dict[key] = self._defaults[key]
-
-        # Apply the merged values to the configuration
-        self._config.update(merged_dict)
-
-        return 0
 
 
 

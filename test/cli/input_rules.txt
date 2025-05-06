@@ -1,8 +1,0 @@
-Refactoring Requirements:
-
-1. Replace the multiplication operator (*) with a loop-based implementation
-2. The loop should add 'a' to itself 'b' times when b is positive
-3. Assume that b is always integer
-4. New code must use PEP8 standard
-
-NOTE !!! if your code includes calling some modules then add "import" statement on top of the code

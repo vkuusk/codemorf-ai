@@ -25,6 +25,7 @@ DEFAULT_CONFIG = {
     # Note: _config_dir  will be set to $HOME/.APP_NAME in class constructor !!! can override ONLY on command_line
     #
     # standard for filesystem
+    'config_dir': '',
     'input_dir': '',
     'output_dir': '',
     'work_dir': '',
@@ -87,13 +88,6 @@ def process_all_args(app_name, default_config):
                 help=f"Override config value for:  {key}"
             )
 
-    num_args = len(parser._actions) - 1
-    print(num_args)
-    if num_args < 3:
-        parser.print_help()
-        sys.exit(0)
-
-
     args = parser.parse_args()
     return args
 
@@ -104,16 +98,20 @@ def main():
 
     configure_logging(args.log_file, args.quiet, args.log_level)
     logger = logging.getLogger(__name__)
+    logger.info(f"Starting {APP_NAME}")
 
-    user_home = os.path.expanduser("~")
 
-    appcfg = CbxConfig(APP_NAME, DEFAULT_CONFIG, user_home=user_home)
-    appcfg.load(args)
+    appcfg = CbxConfig(APP_NAME, args, DEFAULT_CONFIG)
+
+    # if args.config_dir:
+    #     appcfg.load(args,args.config_dir)
+    # else:
+    #     appcfg.load(args)
 
 
     input_scr_file = os.path.join(appcfg.get('input_dir'), appcfg.get('input_code_file'))
-    rules_file = os.path.join(appcfg.get('work_dir'), appcfg.get('rules_file'))
-    testcases_file = os.path.join(appcfg.get('work_dir'), appcfg.get('testcases_file'))
+    rules_file = os.path.join(appcfg.get('input_dir'), appcfg.get('rules_file'))
+    testcases_file = os.path.join(appcfg.get('input_dir'), appcfg.get('testcases_file'))
     output_filename = "{}_{}".format(appcfg.get('output_code_prefix'), appcfg.get('input_code_file'))
     output_file_full_name= os.path.join(appcfg.get('output_dir'), output_filename)
     test_results_file_path = os.path.join(appcfg.get('output_dir'), 'final-test-results.txt')

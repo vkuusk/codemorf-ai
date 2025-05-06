@@ -62,18 +62,21 @@ popd > /dev/null
 # build Docker image
 pushd $script_dir > /dev/null
 
+
+# Check if the builder already exists
+if ! docker buildx inspect cbxbuilder &>/dev/null; then
+  echo "Creating new buildx builder 'cbxbuilder'..."
+  docker buildx create --name cbxbuilder --driver docker-container --bootstrap
+else
+  echo "Builder 'cbxbuilder' already exists, using it."
+fi
+# Use the cbxbuilder
+docker buildx use cbxbuilder
+
+
 # Build with both local and GitHub Container Registry tags if publishing
 if [ "$publish_build" = true ]; then
-    echo "Building with GitHub Container Registry tag..."
-    docker build -t "${docker_image_name}:${release_tag}" -t "ghcr.io/${gh_username}/${docker_image_name}:${release_tag}" .
-else
-    echo "Building with local tag only..."
-    docker build -t "${docker_image_name}:${dev_tag}" .
-fi
-
-# Push to GitHub Container Registry if publishing
-if [ "$publish_build" = true ]; then
-    # Login to GitHub Container Registry
+    # Login to GitHub Container Registry first (moved up from below)
     if [ -z "$GITHUB_TOKEN" ]; then
         echo "Error: GITHUB_TOKEN environment variable is not set"
         echo "Please set it with: export GITHUB_TOKEN=your_github_pat"
@@ -83,9 +86,53 @@ if [ "$publish_build" = true ]; then
     echo "Logging in to GitHub Container Registry..."
     echo "$GITHUB_TOKEN" | docker login ghcr.io -u ${gh_username} --password-stdin
 
-    echo "Pushing image to GitHub Container Registry..."
-    docker push "ghcr.io/${gh_username}/${docker_image_name}:${release_tag}"
+    echo "Building with GitHub Container Registry tag and pushing..."
+    docker buildx build --platform linux/amd64,linux/arm64 \
+        -t "ghcr.io/${gh_username}/${docker_image_name}:${release_tag}" \
+        --push .
+else
+    echo "Building with local tag only..."
+    # For local use, we can only load one platform at a time
+    # Typically choose the native platform
+    docker buildx build --platform linux/arm64 \
+        -t "${docker_image_name}:${dev_tag}" \
+        --load .
 fi
+
+
+
+
+
+
+
+
+
+
+
+## Build with both local and GitHub Container Registry tags if publishing
+#if [ "$publish_build" = true ]; then
+#    echo "Building with GitHub Container Registry tag..."
+#    docker buildx build --platform linux/amd64,linux/arm64 -t "${docker_image_name}:${release_tag}" -t "ghcr.io/${gh_username}/${docker_image_name}:${release_tag}" .
+#else
+#    echo "Building with local tag only..."
+#    docker buildx build --platform linux/amd64,linux/arm64 -t "${docker_image_name}:${dev_tag}" .
+#fi
+#
+## Push to GitHub Container Registry if publishing
+#if [ "$publish_build" = true ]; then
+#    # Login to GitHub Container Registry
+#    if [ -z "$GITHUB_TOKEN" ]; then
+#        echo "Error: GITHUB_TOKEN environment variable is not set"
+#        echo "Please set it with: export GITHUB_TOKEN=your_github_pat"
+#        exit 1
+#    fi
+#
+#    echo "Logging in to GitHub Container Registry..."
+#    echo "$GITHUB_TOKEN" | docker login ghcr.io -u ${gh_username} --password-stdin
+#
+#    echo "Pushing image to GitHub Container Registry..."
+#    docker push "ghcr.io/${gh_username}/${docker_image_name}:${release_tag}"
+#fi
 
 # Cleanup docker build dir
 rm codemorf-*.whl

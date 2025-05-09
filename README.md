@@ -54,7 +54,7 @@ main code to check is here:
 Options to try:
 
 - Add new node(s) for something like "test environment initialization". 
-So that the same environment can persisi over all iteration until success
+So that the same environment can persist over all iterations until success
 
 ### Test Case Translation and Code transformation 
 
